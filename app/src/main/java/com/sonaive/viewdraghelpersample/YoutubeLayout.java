@@ -4,6 +4,7 @@ import android.content.Context;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,6 +45,9 @@ public class YoutubeLayout extends ViewGroup {
 
     @Override
     protected void onFinishInflate() {
+        if (getChildCount() != 2) {
+            throw new IllegalArgumentException("Must add two child view in YoutubeLayout in xml.");
+        }
         mHead = getChildAt(0);
         mDesc = getChildAt(1);
     }
@@ -53,6 +57,10 @@ public class YoutubeLayout extends ViewGroup {
         if (mDragHelper.continueSettling(true)) {
             ViewCompat.postInvalidateOnAnimation(this);
         }
+    }
+
+    public void maximize() {
+        smoothSlideTo(0f);
     }
 
     class DragCallback extends ViewDragHelper.Callback {
@@ -127,6 +135,7 @@ public class YoutubeLayout extends ViewGroup {
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         int action = ev.getActionMasked();
+
         if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
             mDragHelper.cancel();
             return false;
@@ -136,20 +145,20 @@ public class YoutubeLayout extends ViewGroup {
         final float y = ev.getY();
         boolean interceptTap = false;
         switch (action) {
-            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_DOWN: {
                 mInitialMotionX = x;
                 mInitialMotionY = y;
                 interceptTap = mDragHelper.isViewUnder(mHead, (int) x, (int) y);
                 break;
-            case MotionEvent.ACTION_MOVE:
+            }
+            case MotionEvent.ACTION_MOVE: {
                 float dx = Math.abs(x - mInitialMotionX);
                 float dy = Math.abs(y - mInitialMotionY);
-
                 if (dx > dy || dy < mTouchSlop) {
                     mDragHelper.cancel();
                     return false;
                 }
-                break;
+            }
         }
         return mDragHelper.shouldInterceptTouchEvent(ev) || interceptTap;
     }
@@ -162,14 +171,16 @@ public class YoutubeLayout extends ViewGroup {
         final float x = event.getX();
         final float y = event.getY();
         boolean isHeadViewUnder = mDragHelper.isViewUnder(mHead, (int) x, (int) y);
+        Log.d(TAG, "Head view is under given point: " + isHeadViewUnder);
         switch (action) {
-            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_DOWN: {
                 mInitialMotionX = x;
                 mInitialMotionY = y;
                 break;
+            }
             case MotionEvent.ACTION_UP:
-                float dx = Math.abs(x - mInitialMotionX);
-                float dy = Math.abs(y - mInitialMotionY);
+                float dx = x - mInitialMotionX;
+                float dy = y - mInitialMotionY;
 
                 if (dx * dx + dy * dy < mTouchSlop * mTouchSlop && isHeadViewUnder) {
                     if (mDragOffset == 0) {
@@ -180,7 +191,10 @@ public class YoutubeLayout extends ViewGroup {
                 }
                 break;
         }
-        return isHeadViewUnder;
+        boolean isViewHitHead = isViewHit(mHead, x, y);
+        boolean isViewHitDesc = isViewHit(mDesc, x, y);
+        Log.d(TAG, "isViewHitHead: " + isViewHitHead + ", isViewHitDesc: " + isViewHitDesc);
+        return isHeadViewUnder && isViewHitHead || isViewHitDesc;
     }
 
     private boolean smoothSlideTo(float slideOffset) {
@@ -191,5 +205,20 @@ public class YoutubeLayout extends ViewGroup {
             return true;
         }
         return false;
+    }
+
+    private boolean isViewHit(View view, float x, float y) {
+        int[] headLoc = new int[2];
+        view.getLocationOnScreen(headLoc);
+
+        int[] parentLoc = new int[2];
+        getLocationOnScreen(parentLoc);
+
+        int screenX = (int) (x + parentLoc[0]);
+        int screenY = (int) (y + parentLoc[1]);
+        return screenX >= headLoc[0]
+                && screenX < headLoc[0] + view.getWidth()
+                && screenY >= headLoc[1]
+                && screenY < headLoc[1] + view.getHeight();
     }
 }

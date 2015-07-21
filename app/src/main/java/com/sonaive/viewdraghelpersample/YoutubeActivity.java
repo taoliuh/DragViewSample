@@ -27,7 +27,7 @@ public class YoutubeActivity extends ActionBarActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 viewHeader.setText(listView.getAdapter().getItem(i).toString());
                 youtubeLayout.setVisibility(View.VISIBLE);
-//                youtubeLayout.maximize();
+                youtubeLayout.maximize();
             }
         });
 
