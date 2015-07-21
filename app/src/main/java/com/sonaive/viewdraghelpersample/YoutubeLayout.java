@@ -24,6 +24,10 @@ public class YoutubeLayout extends ViewGroup {
     private int mDragRange;
     private float mDragOffset;
 
+    private float mInitialMotionX;
+    private float mInitialMotionY;
+    private int mTouchSlop;
+
     public YoutubeLayout(Context context) {
         this(context, null, 0);
     }
@@ -35,6 +39,7 @@ public class YoutubeLayout extends ViewGroup {
     public YoutubeLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         mDragHelper = ViewDragHelper.create(this, 1.0f, new DragCallback());
+        mTouchSlop = mDragHelper.getTouchSlop();
     }
 
     @Override
@@ -77,8 +82,15 @@ public class YoutubeLayout extends ViewGroup {
 
         @Override
         public void onViewReleased(View releasedChild, float xvel, float yvel) {
-
-            mDragHelper.settleCapturedViewAt(releasedChild.getLeft(), mTop);
+            // The settle down position, if current y coordinate velocity is positive,
+            // or current y coordinate velocity is zero while drag offset exceeds half
+            // of the drag range, then set the settle down position to the bottom.
+            // Otherwise set the settle down position to the top.
+            int top = getPaddingTop();
+            if (yvel > 0 || (yvel == 0 && mDragOffset > 0.5f)) {
+                top += mDragRange;
+            }
+            mDragHelper.settleCapturedViewAt(releasedChild.getLeft(), top);
             invalidate();
         }
 
@@ -89,8 +101,6 @@ public class YoutubeLayout extends ViewGroup {
 
             return Math.min(Math.max(top, topBound), bottomBound);
         }
-
-
     }
 
     @Override
@@ -122,13 +132,64 @@ public class YoutubeLayout extends ViewGroup {
             return false;
         }
 
-        return mDragHelper.shouldInterceptTouchEvent(ev);
+        final float x = ev.getX();
+        final float y = ev.getY();
+        boolean interceptTap = false;
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                mInitialMotionX = x;
+                mInitialMotionY = y;
+                interceptTap = mDragHelper.isViewUnder(mHead, (int) x, (int) y);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                float dx = Math.abs(x - mInitialMotionX);
+                float dy = Math.abs(y - mInitialMotionY);
+
+                if (dx > dy || dy < mTouchSlop) {
+                    mDragHelper.cancel();
+                    return false;
+                }
+                break;
+        }
+        return mDragHelper.shouldInterceptTouchEvent(ev) || interceptTap;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-
         mDragHelper.processTouchEvent(event);
-        return true;
+        int action = event.getActionMasked();
+
+        final float x = event.getX();
+        final float y = event.getY();
+        boolean isHeadViewUnder = mDragHelper.isViewUnder(mHead, (int) x, (int) y);
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                mInitialMotionX = x;
+                mInitialMotionY = y;
+                break;
+            case MotionEvent.ACTION_UP:
+                float dx = Math.abs(x - mInitialMotionX);
+                float dy = Math.abs(y - mInitialMotionY);
+
+                if (dx * dx + dy * dy < mTouchSlop * mTouchSlop && isHeadViewUnder) {
+                    if (mDragOffset == 0) {
+                        smoothSlideTo(1);
+                    } else {
+                        smoothSlideTo(0);
+                    }
+                }
+                break;
+        }
+        return isHeadViewUnder;
+    }
+
+    private boolean smoothSlideTo(float slideOffset) {
+        int topBound = getPaddingTop();
+        int y = (int) (topBound + slideOffset * mDragRange);
+        if (mDragHelper.smoothSlideViewTo(mHead, mHead.getLeft(), y)) {
+            ViewCompat.postInvalidateOnAnimation(this);
+            return true;
+        }
+        return false;
     }
 }
