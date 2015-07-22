@@ -72,12 +72,20 @@ public class YoutubeLayout extends ViewGroup {
 
         @Override
         public void onViewPositionChanged(View changedView, int left, int top, int dx, int dy) {
+            Log.d(TAG, "onViewPositionChanged, top is: " + top);
+            int correction;
             mTop = top;
-            mDragOffset = mTop / (float) mDragRange;
+            if (top < getPaddingTop()) {
+                correction = 0;
+            } else {
+                correction = top - getPaddingTop();
+            }
+            mDragOffset = correction / (float) mDragRange;
             mHead.setPivotX(mHead.getWidth());
             mHead.setPivotY(mHead.getHeight());
             mHead.setScaleX(1 - mDragOffset / 2);
             mHead.setScaleY(1 - mDragOffset / 2);
+            Log.d(TAG, "ScaleX is: " + mHead.getScaleX() + ", scaleY is: " + mHead.getScaleY());
 
             mDesc.setAlpha(1 - mDragOffset);
             requestLayout();
@@ -104,9 +112,9 @@ public class YoutubeLayout extends ViewGroup {
 
         @Override
         public int clampViewPositionVertical(View child, int top, int dy) {
-            int topBound = child.getPaddingTop();
-            int bottomBound = getHeight() - mHead.getHeight() - mHead.getPaddingBottom();
-
+            int topBound = getPaddingTop();
+            int bottomBound = getHeight() - mHead.getHeight() - getPaddingBottom();
+            Log.d(TAG, "Top bound is: " + topBound + ", bottom bound is: " + bottomBound + ", top is: " + top + ", dy is: " + dy);
             return Math.min(Math.max(top, topBound), bottomBound);
         }
     }
@@ -119,9 +127,13 @@ public class YoutubeLayout extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        mDragRange = getHeight() - mHead.getHeight();
+        mDragRange = getHeight() - mHead.getHeight() - getPaddingTop() - getPaddingBottom();
+        if (mTop == 0) {
+            mTop = getPaddingTop();
+        }
+
         mHead.layout(0,
-                mTop,
+                mTop ,
                 r,
                 mTop + mHead.getMeasuredHeight());
 
