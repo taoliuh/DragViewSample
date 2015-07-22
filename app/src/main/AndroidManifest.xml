@@ -20,6 +20,8 @@
         <activity android:name=".DragActivity" />
 
         <activity android:name=".YoutubeActivity" />
+
+        <activity android:name=".PantsOffActivity" />
     </application>
 
 </manifest>

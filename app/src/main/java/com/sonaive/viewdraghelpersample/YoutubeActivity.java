@@ -1,5 +1,6 @@
 package com.sonaive.viewdraghelpersample;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.View;
@@ -12,7 +13,7 @@ import android.widget.TextView;
 /**
  * Created by liutao on 15-7-21.
  */
-public class YoutubeActivity extends ActionBarActivity {
+public class YoutubeActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
